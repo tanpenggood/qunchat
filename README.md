@@ -27,6 +27,7 @@ node scripts/dev.js
 ## 生产部署（Docker）
 
 ```bash
+cd qunchat
 docker build -t qunchat .
 docker run -d -p 8080:8080 --name qunchat qunchat
 ```
