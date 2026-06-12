@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>暗号</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: #f5f5f5; display: flex; flex-direction: column; overflow: hidden;
+    }
+    #header {
+      background: #07c160; color: #fff; padding: 12px 16px; text-align: center;
+      font-size: 17px; font-weight: 600; flex-shrink: 0; position: relative;
+      padding-top: max(12px, env(safe-area-inset-top));
+    }
+    #header-row { display: flex; align-items: center; justify-content: center; gap: 6px; }
+    #online-count { font-size: 12px; font-weight: 400; opacity: .8; }
+    #my-name { font-size: 13px; font-weight: 400; opacity: .85; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+    #my-name:active { background: rgba(255,255,255,.2); }
+    #rename-btn {
+      background: none; border: none; color: #fff; font-size: 16px;
+      cursor: pointer; padding: 2px; opacity: .8; line-height: 1;
+    }
+    #rename-btn:active { opacity: 1; }
+    #clear-btn {
+      background: none; border: none; color: #fff; font-size: 15px;
+      cursor: pointer; padding: 2px; opacity: .7; line-height: 1;
+    }
+    #clear-btn:active { opacity: 1; }
+    #msg-area {
+      flex: 1; overflow-y: auto; padding: 8px 12px; display: flex;
+      flex-direction: column; gap: 6px; -webkit-overflow-scrolling: touch;
+    }
+    #msg-area .msg {
+      max-width: 85%; padding: 8px 12px; border-radius: 8px;
+      font-size: 15px; line-height: 1.5; word-break: break-word;
+    }
+    @media (min-width: 600px) {
+      #msg-area .msg { max-width: 70%; }
+    }
+    #msg-area .msg.self { align-self: flex-end; background: #95ec69; }
+    #msg-area .msg.other { align-self: flex-start; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.1); }
+    #msg-area .msg .meta { font-size: 11px; color: #888; margin-bottom: 4px; }
+    #msg-area .msg .text { white-space: pre-wrap; word-break: break-word; }
+    #input-bar {
+      display: flex; align-items: flex-end; padding: 8px 10px; gap: 8px;
+      background: #fff; border-top: 1px solid #e0e0e0; flex-shrink: 0;
+      padding-bottom: max(8px, env(safe-area-inset-bottom));
+    }
+    #msg-input {
+      flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 20px;
+      font-size: 16px; outline: none; font-family: inherit; resize: none;
+      line-height: 1.4; max-height: 120px; min-height: 36px;
+    }
+    #msg-input:focus { border-color: #07c160; }
+    #msg-input::placeholder { color: #bbb; }
+    #send-btn {
+      padding: 8px 18px; background: #07c160; color: #fff; border: none;
+      border-radius: 20px; font-size: 15px; cursor: pointer; flex-shrink: 0;
+      height: 36px; line-height: 20px;
+    }
+    #send-btn:disabled { background: #ccc; cursor: not-allowed; }
+    #send-btn:active:not(:disabled) { background: #06ad56; }
+    #login-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.5);
+      display: flex; align-items: center; justify-content: center; z-index: 100;
+    }
+    #login-box {
+      background: #fff; padding: 32px 24px; border-radius: 12px;
+      width: 300px; max-width: 85vw; text-align: center;
+    }
+    #login-box h2 { margin-bottom: 8px; font-size: 20px; }
+    #login-box p { color: #888; font-size: 13px; margin-bottom: 20px; }
+    #login-box input {
+      width: 100%; padding: 12px 14px; border: 1px solid #ddd;
+      border-radius: 8px; font-size: 16px; margin-bottom: 16px; outline: none;
+    }
+    #login-box input:focus { border-color: #07c160; }
+    #login-box button {
+      width: 100%; padding: 12px; background: #07c160; color: #fff;
+      border: none; border-radius: 8px; font-size: 16px; cursor: pointer;
+    }
+    #login-box button:active { background: #06ad56; }
+    #rename-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.5);
+      display: none; align-items: center; justify-content: center; z-index: 200;
+    }
+    #rename-box {
+      background: #fff; padding: 28px 24px; border-radius: 12px;
+      width: 300px; max-width: 85vw; text-align: center;
+    }
+    #rename-box h2 { margin-bottom: 16px; font-size: 18px; }
+    #rename-box input {
+      width: 100%; padding: 12px 14px; border: 1px solid #ddd;
+      border-radius: 8px; font-size: 16px; outline: none;
+    }
+    #rename-box input:focus { border-color: #07c160; }
+    .sys-msg { text-align: center; color: #999; font-size: 12px; padding: 4px 0; }
+    #connection-status {
+      text-align: center; color: #999; font-size: 12px; padding: 4px; flex-shrink: 0;
+    }
+    #connection-status.disconnected { color: #e74c3c; }
+    #connection-status.connected { color: #07c160; }
+  </style>
+</head>
+<body>
+  <div id="header">
+    <div id="header-row">
+      暗号 <span id="online-count"></span>
+      <span id="my-name"></span>
+      <button id="rename-btn">✏️</button>
+      <button id="clear-btn" title="清空聊天记录">🗑️</button>
+    </div>
+  </div>
+  <div id="connection-status">正在连接...</div>
+  <div id="msg-area"></div>
+  <div id="input-bar">
+    <textarea id="msg-input" placeholder="输入消息..." rows="1" disabled></textarea>
+    <button id="send-btn" disabled>发送</button>
+  </div>
+
+  <div id="login-overlay">
+    <div id="login-box">
+      <h2>加入暗号</h2>
+      <p>输入昵称后进入聊天室</p>
+      <input id="name-input" placeholder="你的昵称" maxlength="16" autofocus>
+      <button id="join-btn">加入</button>
+    </div>
+  </div>
+
+  <div id="rename-overlay" style="display:none">
+    <div id="rename-box">
+      <h2>修改昵称</h2>
+      <input id="rename-input" placeholder="输入新昵称" maxlength="16">
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button id="rename-cancel" style="flex:1;padding:12px;background:#eee;color:#333;border:none;border-radius:8px;font-size:16px;cursor:pointer">取消</button>
+        <button id="rename-confirm" style="flex:1;padding:12px;background:#07c160;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const LS_KEY_MSGS = 'qunchat_messages'
+    const LS_KEY_NAME = 'qunchat_nickname'
+    const LS_KEY_CLIENT = 'qunchat_client_id'
+    const MAX_MSGS = 500
+
+    function getClientId() {
+      let id = localStorage.getItem(LS_KEY_CLIENT)
+      if (!id) {
+        id = Date.now().toString(36) + Math.random().toString(36).slice(2, 10)
+        localStorage.setItem(LS_KEY_CLIENT, id)
+      }
+      return id
+    }
+    const clientId = getClientId()
+
+    let ws = null
+    let nickname = ''
+    let reconnectTimer = null
+
+    const msgArea = document.getElementById('msg-area')
+    const msgInput = document.getElementById('msg-input')
+    const sendBtn = document.getElementById('send-btn')
+    const connStatus = document.getElementById('connection-status')
+    const myNameEl = document.getElementById('my-name')
+    const onlineCountEl = document.getElementById('online-count')
+
+    const bc = new BroadcastChannel('qunchat_sync')
+
+    function loadMsgs() {
+      try {
+        const raw = localStorage.getItem(LS_KEY_MSGS)
+        return raw ? JSON.parse(raw) : []
+      } catch { return [] }
+    }
+
+    function saveMsgs(msgs) {
+      try {
+        while (msgs.length > MAX_MSGS) msgs.shift()
+        localStorage.setItem(LS_KEY_MSGS, JSON.stringify(msgs))
+      } catch (e) {
+        if (e.name === 'QuotaExceededError') {
+          msgs.splice(0, Math.floor(MAX_MSGS / 2))
+          try { localStorage.setItem(LS_KEY_MSGS, JSON.stringify(msgs)) } catch {}
+        }
+      }
+    }
+
+    function pushMsg(data) {
+      const msgs = loadMsgs()
+      msgs.push(data)
+      saveMsgs(msgs)
+    }
+
+    function restoreMsgs() {
+      const msgs = loadMsgs()
+      for (const m of msgs) {
+        if (m.name === '系统') {
+          addSysMsg(m.text)
+        } else {
+          renderMsg(m)
+        }
+      }
+    }
+
+    function showNickname() {
+      myNameEl.textContent = nickname
+    }
+
+    function openRename() {
+      if (!nickname) return
+      document.getElementById('rename-input').value = nickname
+      document.getElementById('rename-overlay').style.display = 'flex'
+      document.getElementById('rename-input').focus()
+    }
+
+    function confirmRename() {
+      const newName = document.getElementById('rename-input').value.trim()
+      if (!newName) return alert('请输入昵称')
+      if (newName === nickname) { closeRename(); return }
+      nickname = newName
+      showNickname()
+      localStorage.setItem(LS_KEY_NAME, nickname)
+      bc.postMessage({ type: 'nickname', name: nickname })
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ cmd: 'rename', name: nickname, senderId: clientId }))
+      }
+      closeRename()
+    }
+
+    function closeRename() {
+      document.getElementById('rename-overlay').style.display = 'none'
+    }
+
+    function scrollBottom() {
+      msgArea.scrollTop = msgArea.scrollHeight
+    }
+
+    function addSysMsg(text) {
+      const div = document.createElement('div')
+      div.className = 'sys-msg'
+      div.textContent = text
+      msgArea.appendChild(div)
+      scrollBottom()
+    }
+
+    function renderMsg(data) {
+      const div = document.createElement('div')
+      const isSelf = data.senderId === clientId
+      div.className = 'msg ' + (isSelf ? 'self' : 'other')
+
+      const metaEl = document.createElement('div')
+      metaEl.className = 'meta'
+      const time = new Date(data.time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+      metaEl.textContent = time + ' | ' + data.name
+
+      const textEl = document.createElement('div')
+      textEl.className = 'text'
+      textEl.textContent = data.text
+
+      div.appendChild(metaEl)
+      div.appendChild(textEl)
+      msgArea.appendChild(div)
+      scrollBottom()
+    }
+
+    function connect() {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
+      const url = protocol + '//' + location.host + '/ws'
+
+      if (ws) {
+        ws.onclose = null
+        ws.close()
+      }
+
+      ws = new WebSocket(url)
+
+      ws.onopen = function () {
+        connStatus.textContent = '已连接'
+        connStatus.className = 'connected'
+        if (nickname) {
+          ws.send(JSON.stringify({ name: nickname, senderId: clientId }))
+        }
+      }
+
+      ws.onclose = function () {
+        connStatus.textContent = '连接断开，3 秒后重连...'
+        connStatus.className = 'disconnected'
+        if (reconnectTimer) clearTimeout(reconnectTimer)
+        reconnectTimer = setTimeout(connect, 3000)
+      }
+
+      ws.onerror = function () {
+        ws.close()
+      }
+
+      ws.onmessage = function (e) {
+        try {
+          const msg = JSON.parse(e.data)
+          if (msg.online !== undefined) {
+            onlineCountEl.textContent = msg.online > 0 ? ' (' + msg.online + ')' : ''
+          }
+          if (msg.name === '系统') {
+            addSysMsg(msg.text)
+            pushMsg({ name: '系统', text: msg.text, time: msg.time || Date.now() })
+          } else {
+            renderMsg(msg)
+            pushMsg(msg)
+          }
+        } catch (_) {}
+      }
+    }
+
+    function sendMessage() {
+      const text = msgInput.value.trim()
+      if (!text || !ws || ws.readyState !== WebSocket.OPEN) return
+      msgInput.value = ''
+      msgInput.style.height = 'auto'
+      ws.send(JSON.stringify({ name: nickname, text: text, senderId: clientId }))
+    }
+
+    function joinChat() {
+      const name = document.getElementById('name-input').value.trim()
+      if (!name) return alert('请输入昵称')
+      nickname = name
+      showNickname()
+      localStorage.setItem(LS_KEY_NAME, nickname)
+      bc.postMessage({ type: 'nickname', name: nickname })
+      document.getElementById('login-overlay').style.display = 'none'
+      msgInput.disabled = false
+      sendBtn.disabled = false
+      msgInput.focus()
+      connect()
+    }
+
+    bc.onmessage = function (e) {
+      const msg = e.data
+      if (msg.type === 'clear') {
+        msgArea.innerHTML = ''
+        return
+      }
+      if (msg.type === 'nickname' && msg.name !== nickname) {
+        if (!nickname) {
+          nickname = msg.name
+          showNickname()
+          document.getElementById('login-overlay').style.display = 'none'
+          msgInput.disabled = false
+          sendBtn.disabled = false
+          connect()
+        } else {
+          nickname = msg.name
+          showNickname()
+        }
+      }
+    }
+
+    restoreMsgs()
+    const savedNick = localStorage.getItem(LS_KEY_NAME)
+    if (savedNick) {
+      nickname = savedNick
+      showNickname()
+      document.getElementById('login-overlay').style.display = 'none'
+      msgInput.disabled = false
+      sendBtn.disabled = false
+      connect()
+    }
+
+    msgInput.addEventListener('input', function () {
+      this.style.height = 'auto'
+      this.style.height = Math.min(this.scrollHeight, 120) + 'px'
+    })
+
+    msgInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
+        sendMessage()
+      }
+    })
+
+    document.getElementById('join-btn').onclick = joinChat
+    document.getElementById('name-input').onkeydown = function (e) {
+      if (e.key === 'Enter') joinChat()
+    }
+    sendBtn.onclick = sendMessage
+    document.getElementById('rename-btn').onclick = openRename
+    myNameEl.onclick = openRename
+
+    document.getElementById('clear-btn').onclick = function () {
+      if (!confirm('确定清空所有聊天记录？')) return
+      localStorage.removeItem(LS_KEY_MSGS)
+      msgArea.innerHTML = ''
+      bc.postMessage({ type: 'clear' })
+    }
+    document.getElementById('rename-confirm').onclick = confirmRename
+    document.getElementById('rename-cancel').onclick = closeRename
+    document.getElementById('rename-input').onkeydown = function (e) {
+      if (e.key === 'Enter') confirmRename()
+    }
+  </script>
+</body>
+</html>
