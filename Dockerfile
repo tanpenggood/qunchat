@@ -7,19 +7,18 @@
 # ============================================================
 
 # ---------- Go 后端 ----------
-FROM golang:1.22-alpine AS go
+FROM m.daocloud.io/docker.io/library/golang:1.22-alpine AS go
 WORKDIR /app
 COPY go.mod go.sum* ./
-RUN go mod download
 COPY backends/go/ ./backends/go/
 COPY frontend/index.html ./frontend/
-RUN go build -o server ./backends/go
+RUN GOPROXY=https://goproxy.cn,direct go mod tidy && go build -o server ./backends/go
 EXPOSE 8080
 CMD ["./server"]
 
 
 # ---------- Node 后端 ----------
-FROM node:18-alpine AS node
+FROM m.daocloud.io/docker.io/library/node:18-alpine AS node
 WORKDIR /app
 COPY backends/node/package*.json ./backends/node/
 RUN cd backends/node && npm install
@@ -30,7 +29,7 @@ CMD ["node", "backends/node/dev.js"]
 
 
 # ---------- Python 后端 ----------
-FROM python:3.11-slim AS python
+FROM m.daocloud.io/docker.io/library/python:3.11-slim AS python
 WORKDIR /app
 COPY backends/python/requirements.txt ./backends/python/
 RUN pip install -r backends/python/requirements.txt --no-cache-dir
