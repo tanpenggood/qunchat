@@ -93,6 +93,18 @@ func (h *Hub) Run() {
 	}
 }
 
+func (h *Hub) GetOnlineUsers() []string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	names := make([]string, 0, len(h.clients))
+	for c := range h.clients {
+		if c.name != "" {
+			names = append(names, c.name)
+		}
+	}
+	return names
+}
+
 func (h *Hub) broadcastSystem(text string) {
 	h.broadcast <- Message{Name: "系统", Text: text, Time: time.Now().UnixMilli()}
 }
@@ -152,6 +164,16 @@ func (c *Client) readPump() {
 			oldName := c.name
 			c.name = msg.Name
 			c.hub.broadcastSystem(oldName + " 改名为 " + c.name)
+			continue
+		}
+
+		if msg.Cmd == "whoisonline" {
+			users := c.hub.GetOnlineUsers()
+			resp, _ := json.Marshal(map[string]any{
+				"type":  "online_list",
+				"users": users,
+			})
+			c.send <- resp
 			continue
 		}
 

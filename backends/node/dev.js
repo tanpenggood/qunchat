@@ -15,7 +15,7 @@ const MIME = {
   '.ico': 'image/x-icon',
 }
 
-const clients = new Set()
+const clients = new Map()
 
 const mime = (p) => MIME[path.extname(p)] || 'application/octet-stream'
 
@@ -35,13 +35,13 @@ const wss = new WebSocketServer({ server })
 function broadcast(data) {
   data.online = clients.size
   const msg = JSON.stringify(data)
-  for (const ws of clients) {
+  for (const ws of clients.keys()) {
     if (ws.readyState === 1) ws.send(msg)
   }
 }
 
 wss.on('connection', (ws) => {
-  clients.add(ws)
+  clients.set(ws, '')
   let name = ''
 
   ws.on('message', (raw) => {
@@ -50,6 +50,7 @@ wss.on('connection', (ws) => {
     if (!name) {
       if (!msg.name) return
       name = msg.name
+      clients.set(ws, name)
       broadcast({ name: '系统', text: name + ' 加入了群聊', time: Date.now() })
       return
     }
@@ -57,7 +58,16 @@ wss.on('connection', (ws) => {
       if (!msg.name) return
       const oldName = name
       name = msg.name
+      clients.set(ws, name)
       broadcast({ name: '系统', text: oldName + ' 改名为 ' + name, time: Date.now() })
+      return
+    }
+    if (msg.cmd === 'whoisonline') {
+      const users = []
+      for (const n of clients.values()) {
+        if (n) users.push(n)
+      }
+      ws.send(JSON.stringify({ type: 'online_list', users }))
       return
     }
     if (!msg.text) return

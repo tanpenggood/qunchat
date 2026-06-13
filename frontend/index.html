@@ -104,6 +104,32 @@
     }
     #connection-status.disconnected { color: #e74c3c; }
     #connection-status.connected { color: #07c160; }
+    #online-count { cursor: pointer; }
+    #online-list-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.5);
+      display: none; align-items: center; justify-content: center; z-index: 300;
+    }
+    #online-list-box {
+      background: #fff; border-radius: 12px; width: 280px; max-width: 80vw;
+      max-height: 60vh; display: flex; flex-direction: column; overflow: hidden;
+    }
+    #online-list-box h2 {
+      font-size: 16px; font-weight: 600; text-align: center;
+      padding: 16px 16px 0; flex-shrink: 0;
+    }
+    #online-list-count { font-size: 13px; font-weight: 400; color: #888; }
+    #online-list-content {
+      flex: 1; overflow-y: auto; padding: 8px 16px;
+    }
+    .online-user-item {
+      padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 15px; color: #333;
+    }
+    .online-user-item:last-child { border-bottom: none; }
+    #online-list-close {
+      width: 100%; padding: 12px; background: #f5f5f5; border: none;
+      border-top: 1px solid #e0e0e0; font-size: 15px; color: #333; cursor: pointer; flex-shrink: 0;
+    }
+    #online-list-close:active { background: #e8e8e8; }
   </style>
 </head>
 <body>
@@ -128,6 +154,14 @@
       <p>输入昵称后进入聊天室</p>
       <input id="name-input" placeholder="你的昵称" maxlength="16" autofocus>
       <button id="join-btn">加入</button>
+    </div>
+  </div>
+
+  <div id="online-list-overlay">
+    <div id="online-list-box">
+      <h2>在线人员 <span id="online-list-count"></span></h2>
+      <div id="online-list-content"></div>
+      <button id="online-list-close">关闭</button>
     </div>
   </div>
 
@@ -161,6 +195,7 @@
     let ws = null
     let nickname = ''
     let reconnectTimer = null
+    let onlineUsers = []
 
     const msgArea = document.getElementById('msg-area')
     const msgInput = document.getElementById('msg-input')
@@ -236,6 +271,19 @@
       document.getElementById('rename-overlay').style.display = 'none'
     }
 
+    function showOnlineList() {
+      document.getElementById('online-list-count').textContent = '(' + onlineUsers.length + ')'
+      const content = document.getElementById('online-list-content')
+      content.innerHTML = ''
+      for (const u of onlineUsers) {
+        const div = document.createElement('div')
+        div.className = 'online-user-item'
+        div.textContent = u
+        content.appendChild(div)
+      }
+      document.getElementById('online-list-overlay').style.display = 'flex'
+    }
+
     function scrollBottom() {
       msgArea.scrollTop = msgArea.scrollHeight
     }
@@ -301,6 +349,11 @@
       ws.onmessage = function (e) {
         try {
           const msg = JSON.parse(e.data)
+          if (msg.type === 'online_list') {
+            onlineUsers = msg.users || []
+            showOnlineList()
+            return
+          }
           if (msg.online !== undefined) {
             onlineCountEl.textContent = msg.online > 0 ? ' (' + msg.online + ')' : ''
           }
@@ -388,6 +441,11 @@
     sendBtn.onclick = sendMessage
     document.getElementById('rename-btn').onclick = openRename
     myNameEl.onclick = openRename
+    onlineCountEl.onclick = function () {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ cmd: 'whoisonline' }))
+      }
+    }
 
     document.getElementById('clear-btn').onclick = function () {
       if (!confirm('确定清空所有聊天记录？')) return
@@ -399,6 +457,12 @@
     document.getElementById('rename-cancel').onclick = closeRename
     document.getElementById('rename-input').onkeydown = function (e) {
       if (e.key === 'Enter') confirmRename()
+    }
+    document.getElementById('online-list-close').onclick = function () {
+      document.getElementById('online-list-overlay').style.display = 'none'
+    }
+    document.getElementById('online-list-overlay').onclick = function (e) {
+      if (e.target === this) this.style.display = 'none'
     }
   </script>
 </body>

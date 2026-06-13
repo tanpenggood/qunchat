@@ -63,6 +63,14 @@ async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
             })
             continue
 
+        if data.get("cmd") == "whoisonline":
+            users = [n for n in clients.values() if n]
+            await ws.send_str(json.dumps({
+                "type": "online_list",
+                "users": users,
+            }, ensure_ascii=False))
+            continue
+
         text = data.get("text", "")
         if not text:
             continue
