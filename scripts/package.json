@@ -1,4 +1,9 @@
 {
+  "scripts": {
+    "start:go": "cd .. && go run ./server",
+    "start:node": "node dev.js",
+    "start:python": "cd .. && python scripts/server.py"
+  },
   "dependencies": {
     "ws": "^8.21.0"
   }
