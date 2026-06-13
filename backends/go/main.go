@@ -19,13 +19,20 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-type Message struct {
-	Cmd      string `json:"cmd,omitempty"`
+type ReplyTo struct {
 	Name     string `json:"name"`
-	Text     string `json:"text,omitempty"`
-	Time     int64  `json:"time,omitempty"`
-	SenderId string `json:"senderId,omitempty"`
-	Online   int    `json:"online,omitempty"`
+	Text     string `json:"text"`
+	SenderId string `json:"senderId"`
+}
+
+type Message struct {
+	Cmd      string   `json:"cmd,omitempty"`
+	Name     string   `json:"name"`
+	Text     string   `json:"text,omitempty"`
+	Time     int64    `json:"time,omitempty"`
+	SenderId string   `json:"senderId,omitempty"`
+	Online   int      `json:"online,omitempty"`
+	ReplyTo  *ReplyTo `json:"replyTo,omitempty"`
 }
 
 type Client struct {

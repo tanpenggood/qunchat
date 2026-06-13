@@ -43,8 +43,32 @@
     }
     #msg-area .msg.self { align-self: flex-end; background: #95ec69; }
     #msg-area .msg.other { align-self: flex-start; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.1); }
-    #msg-area .msg .meta { font-size: 11px; color: #888; margin-bottom: 4px; }
+    #msg-area .msg .meta { font-size: 11px; color: #888; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+    #msg-area .msg .meta .reply-btn {
+      font-size: 11px; color: #888; cursor: pointer; background: none; border: none; padding: 0; line-height: 1; flex-shrink: 0;
+    }
+    @media (hover: hover) {
+      #msg-area .msg .meta .reply-btn { opacity: 0; transition: opacity .15s; }
+      #msg-area .msg:hover .meta .reply-btn { opacity: 1; }
+    }
+    #msg-area .msg .reply-to {
+      background: rgba(0,0,0,.06); border-left: 3px solid #07c160; border-radius: 4px;
+      padding: 4px 8px; margin-bottom: 4px; font-size: 13px; line-height: 1.4;
+    }
+    #msg-area .msg .reply-to .reply-to-name { color: #07c160; font-weight: 500; }
+    #msg-area .msg .reply-to .reply-to-text { color: #666; white-space: pre-wrap; word-break: break-word; }
     #msg-area .msg .text { white-space: pre-wrap; word-break: break-word; }
+    #input-area { flex-shrink: 0; }
+    #quote-bar {
+      display: none; align-items: center; gap: 8px; padding: 6px 12px;
+      background: #f0f0f0; border-top: 1px solid #e0e0e0; font-size: 13px; color: #666;
+    }
+    #quote-bar .quote-info { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #quote-bar .quote-info strong { color: #07c160; }
+    #quote-bar .quote-close {
+      background: none; border: none; font-size: 16px; color: #999; cursor: pointer; padding: 0 4px; line-height: 1; flex-shrink: 0;
+    }
+    #quote-bar .quote-close:active { color: #333; }
     #input-bar {
       display: flex; align-items: flex-end; padding: 8px 10px; gap: 8px;
       background: #fff; border-top: 1px solid #e0e0e0; flex-shrink: 0;
@@ -143,9 +167,15 @@
   </div>
   <div id="connection-status">正在连接...</div>
   <div id="msg-area"></div>
-  <div id="input-bar">
-    <textarea id="msg-input" placeholder="输入消息..." rows="1" disabled></textarea>
-    <button id="send-btn" disabled>发送</button>
+  <div id="input-area">
+    <div id="quote-bar">
+      <span class="quote-info">引用 <strong id="quote-name"></strong>: <span id="quote-text"></span></span>
+      <button class="quote-close" id="quote-close">✕</button>
+    </div>
+    <div id="input-bar">
+      <textarea id="msg-input" placeholder="输入消息..." rows="1" disabled></textarea>
+      <button id="send-btn" disabled>发送</button>
+    </div>
   </div>
 
   <div id="login-overlay">
@@ -196,6 +226,7 @@
     let nickname = ''
     let reconnectTimer = null
     let onlineUsers = []
+    let replyTarget = null
 
     const msgArea = document.getElementById('msg-area')
     const msgInput = document.getElementById('msg-input')
@@ -296,6 +327,19 @@
       scrollBottom()
     }
 
+    function setReply(data) {
+      replyTarget = { name: data.name, text: data.text, senderId: data.senderId }
+      document.getElementById('quote-name').textContent = data.name
+      document.getElementById('quote-text').textContent = data.text
+      document.getElementById('quote-bar').style.display = 'flex'
+      msgInput.focus()
+    }
+
+    function clearReply() {
+      replyTarget = null
+      document.getElementById('quote-bar').style.display = 'none'
+    }
+
     function renderMsg(data) {
       const div = document.createElement('div')
       const isSelf = data.senderId === clientId
@@ -304,7 +348,24 @@
       const metaEl = document.createElement('div')
       metaEl.className = 'meta'
       const time = new Date(data.time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-      metaEl.textContent = time + ' | ' + data.name
+      const nameSpan = document.createElement('span')
+      nameSpan.textContent = time + ' | ' + data.name
+      metaEl.appendChild(nameSpan)
+
+      if (data.name !== '系统') {
+        const replyBtn = document.createElement('button')
+        replyBtn.className = 'reply-btn'
+        replyBtn.textContent = '↩'
+        replyBtn.onclick = function () { setReply(data) }
+        metaEl.appendChild(replyBtn)
+      }
+
+      if (data.replyTo) {
+        const replyEl = document.createElement('div')
+        replyEl.className = 'reply-to'
+        replyEl.innerHTML = '<div class="reply-to-name">' + escapeHtml(data.replyTo.name) + '</div><div class="reply-to-text">' + escapeHtml(data.replyTo.text) + '</div>'
+        div.appendChild(replyEl)
+      }
 
       const textEl = document.createElement('div')
       textEl.className = 'text'
@@ -368,12 +429,19 @@
       }
     }
 
+    function escapeHtml(s) {
+      const d = document.createElement('div'); d.textContent = s; return d.innerHTML
+    }
+
     function sendMessage() {
       const text = msgInput.value.trim()
       if (!text || !ws || ws.readyState !== WebSocket.OPEN) return
+      const payload = { name: nickname, text: text, senderId: clientId }
+      if (replyTarget) payload.replyTo = replyTarget
       msgInput.value = ''
       msgInput.style.height = 'auto'
-      ws.send(JSON.stringify({ name: nickname, text: text, senderId: clientId }))
+      ws.send(JSON.stringify(payload))
+      clearReply()
     }
 
     function joinChat() {
@@ -464,6 +532,7 @@
     document.getElementById('online-list-overlay').onclick = function (e) {
       if (e.target === this) this.style.display = 'none'
     }
+    document.getElementById('quote-close').onclick = clearReply
   </script>
 </body>
 </html>
