@@ -1,0 +1,9 @@
+# ---------- Python 后端 ----------
+FROM m.daocloud.io/docker.io/library/python:3.11-slim AS python
+WORKDIR /app
+COPY backends/python/requirements.txt ./backends/python/
+RUN pip install -r backends/python/requirements.txt --no-cache-dir
+COPY backends/python/server.py ./backends/python/
+COPY frontend/index.html ./frontend/
+EXPOSE 8080
+CMD ["python", "backends/python/server.py"]

@@ -51,16 +51,16 @@ python backends/python/server.py
 ## 生产部署（Docker）
 
 ```bash
-# Go 后端（默认）
-docker build --target go -t qunchat:go .
+# Go 后端
+docker build -f docker/Dockerfile.go -t qunchat:go .
 docker run -d -p 8080:8080 --name qunchat qunchat:go
 
 # Node.js 后端
-docker build --target node -t qunchat:node .
+docker build -f docker/Dockerfile.node -t qunchat:node .
 docker run -d -p 8080:8080 --name qunchat qunchat:node
 
 # Python 后端
-docker build --target python -t qunchat:python .
+docker build -f docker/Dockerfile.python -t qunchat:python .
 docker run -d -p 8080:8080 --name qunchat qunchat:python
 ```
 
@@ -88,7 +88,10 @@ qunchat/
 ├── docs/
 │   ├── ARCHITECTURE.md
 │   └── PRD.md
-├── Dockerfile           # 多阶段构建（三种 target）
+├── docker/
+│   ├── Dockerfile.go     # Go 后端构建
+│   ├── Dockerfile.node   # Node.js 后端构建
+│   └── Dockerfile.python # Python 后端构建
 ├── start.ps1            # Windows 启动脚本
 ├── start.sh             # Linux/macOS 启动脚本
 ├── go.mod

@@ -1,0 +1,9 @@
+# ---------- Node 后端 ----------
+FROM m.daocloud.io/docker.io/library/node:18-alpine AS node
+WORKDIR /app
+COPY backends/node/package*.json ./backends/node/
+RUN cd backends/node && npm install
+COPY backends/node/dev.js ./backends/node/
+COPY frontend/index.html ./frontend/
+EXPOSE 8080
+CMD ["node", "backends/node/dev.js"]
