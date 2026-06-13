@@ -54,15 +54,15 @@ python backends/python/server.py
 ```bash
 # Go 后端
 docker build -f docker/Dockerfile.go -t qunchat:go .
-docker run -d -p 8080:8080 --name qunchat qunchat:go
+docker rm -f qunchat 2>/dev/null; docker run -d -p 8080:8080 --name qunchat qunchat:go
 
 # Node.js 后端
 docker build -f docker/Dockerfile.node -t qunchat:node .
-docker run -d -p 8080:8080 --name qunchat qunchat:node
+docker rm -f qunchat 2>/dev/null; docker run -d -p 8080:8080 --name qunchat qunchat:node
 
 # Python 后端
 docker build -f docker/Dockerfile.python -t qunchat:python .
-docker run -d -p 8080:8080 --name qunchat qunchat:python
+docker rm -f qunchat 2>/dev/null; docker run -d -p 8080:8080 --name qunchat qunchat:python
 ```
 
 环境变量：
