@@ -207,7 +207,7 @@ func main() {
 		serveWs(hub, w, r)
 	})
 
-	http.Handle("/", http.FileServer(http.Dir(".")))
+	http.Handle("/", http.FileServer(http.Dir("./frontend")))
 
 	port := getPort()
 	log.Printf("Chat server starting on :%s", port)

@@ -4,7 +4,7 @@ const path = require('path')
 const { WebSocketServer } = require('ws')
 
 const PORT = process.env.PORT || 8080
-const ROOT = path.resolve(__dirname, '..')
+const ROOT = path.resolve(__dirname, '..', '..', 'frontend')
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -76,5 +76,5 @@ wss.on('connection', (ws) => {
 
 server.listen(PORT, () => {
   console.log('Dev server at http://localhost:' + PORT)
-  console.log('For production, build Go: cd qunchat && go build -o server ./server && ./server')
+  console.log('For production, build Go: go build -o server ./backends/go && ./server')
 })

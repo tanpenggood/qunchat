@@ -3,9 +3,9 @@
 )
 
 $choices = @{
-    "1" = @{Name="Go";     Cmd="go run ./server";          Req="go"}
-    "2" = @{Name="Node";   Cmd="node scripts/dev.js";      Req="node"}
-    "3" = @{Name="Python"; Cmd="python scripts/server.py"; Req="python"}
+    "1" = @{Name="Go";     Cmd="go run ./backends/go";              Req="go"}
+    "2" = @{Name="Node";   Cmd="node backends/node/dev.js";         Req="node"}
+    "3" = @{Name="Python"; Cmd="python backends/python/server.py";  Req="python"}
 }
 
 if (-not $Backend) {
@@ -26,7 +26,6 @@ if (-not $choice) {
     exit 1
 }
 
-# Check if required runtime exists
 if (-not (Get-Command $choice.Req -ErrorAction SilentlyContinue)) {
     Write-Error "未找到 $($choice.Req)，请先安装 $($choice.Name) 运行时"
     exit 1
@@ -37,9 +36,9 @@ Push-Location $projectRoot
 
 Write-Host "启动 $($choice.Name) 后端 (http://localhost:$($env:PORT -or 8080))..." -ForegroundColor Green
 switch ($choice.Name) {
-    "Go"     { go run ./server }
-    "Node"   { node scripts/dev.js }
-    "Python" { python scripts/server.py }
+    "Go"     { go run ./backends/go }
+    "Node"   { node backends/node/dev.js }
+    "Python" { python backends/python/server.py }
 }
 
 Pop-Location

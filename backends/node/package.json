@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "start:go": "cd ../.. && go run ./backends/go",
+    "start:node": "node dev.js",
+    "start:python": "cd ../.. && python backends/python/server.py"
+  },
+  "dependencies": {
+    "ws": "^8.21.0"
+  }
+}

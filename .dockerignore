@@ -3,5 +3,6 @@
 .gitignore
 docs/
 node_modules/
+backends/node/node_modules/
 *.md
 LICENSE

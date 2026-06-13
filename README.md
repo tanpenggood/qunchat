@@ -1,6 +1,6 @@
 # 暗号
 
-轻量级、移动优先的群聊 Web 应用。Go 后端 + WebSocket 实时通信，零服务端消息存储。
+轻量级、移动优先的群聊 Web 应用。支持 Go / Node.js / Python 三种后端，WebSocket 实时通信，零服务端消息存储。
 
 ## 功能
 
@@ -14,53 +14,97 @@
 - 移动适配 —— safe-area-inset 刘海屏适配，触屏优化
 - 连接状态 —— 顶部实时显示连接状态，断线自动重连
 
-## 快速开始（开发）
+## 快速开始
 
 ```bash
-cd qunchat
-npm install ws
-node scripts/dev.js
+# Go 后端（推荐）
+go run ./backends/go
+
+# Node.js 后端
+cd backends/node && npm install && node dev.js
+
+# Python 后端
+pip install -r backends/python/requirements.txt
+python backends/python/server.py
 ```
 
 打开 http://localhost:8080
 
+启动脚本也提供了交互式选择：
+
+```bash
+# Windows
+.\start.ps1
+
+# Linux / macOS
+./start.sh
+```
+
+## 三种后端对比
+
+| 后端   | 语言      | 适用场景         | 性能        | 依赖                       |
+|--------|-----------|------------------|-------------|----------------------------|
+| Go     | Go 1.22   | 生产部署         | ⚡ 高       | 无（标准库 + gorilla/websocket） |
+| Node   | Node.js   | 原型开发 / 调试  | 🚀 中      | ws                         |
+| Python | Python 3  | 教学 / 快速实验  | 🐢 低      | aiohttp                    |
+
 ## 生产部署（Docker）
 
 ```bash
-cd qunchat
-docker build -t qunchat .
-docker run -d -p 8080:8080 --name qunchat qunchat
+# Go 后端（默认）
+docker build --target go -t qunchat:go .
+docker run -d -p 8080:8080 --name qunchat qunchat:go
+
+# Node.js 后端
+docker build --target node -t qunchat:node .
+docker run -d -p 8080:8080 --name qunchat qunchat:node
+
+# Python 后端
+docker build --target python -t qunchat:python .
+docker run -d -p 8080:8080 --name qunchat qunchat:python
 ```
 
 环境变量：
 
-| 变量 | 默认值 | 说明 |
-|------|--------|------|
-| `PORT` | `8080` | HTTP 服务端口 |
+| 变量   | 默认值   | 说明           |
+|--------|----------|----------------|
+| `PORT` | `8080`   | HTTP 服务端口  |
 
 ## 目录结构
 
 ```
 qunchat/
-├── index.html         # 前端单页应用（HTML + CSS + JS）
-├── server/main.go     # Go 生产服务器（WebSocket + 静态文件）
-├── scripts/dev.js     # Node.js 开发服务器
-├── Dockerfile         # 多阶段 Docker 构建
-├── go.mod             # Go 模块依赖
-└── docs/              # 文档
+├── backends/            # 三种后端实现
+│   ├── go/              # Go 生产服务器
+│   │   └── main.go
+│   ├── node/            # Node.js 开发服务器
+│   │   ├── dev.js
+│   │   └── package.json
+│   └── python/          # Python 开发服务器
+│       ├── server.py
+│       └── requirements.txt
+├── frontend/            # 前端单页应用
+│   └── index.html
+├── docs/
+│   ├── ARCHITECTURE.md
+│   └── PRD.md
+├── Dockerfile           # 多阶段构建（三种 target）
+├── start.ps1            # Windows 启动脚本
+├── start.sh             # Linux/macOS 启动脚本
+├── go.mod
+└── README.md
 ```
 
 ## 技术栈
 
-| 层 | 技术 |
-|----|------|
-| 前端 | 原生 HTML/CSS/JS，无框架 |
-| 通信 | WebSocket (gorilla/websocket) |
-| 后端(生产) | Go 1.22 |
-| 后端(开发) | Node.js + ws |
-| 存储 | 浏览器 localStorage |
-| 跨标签同步 | BroadcastChannel API |
-| 容器化 | Docker 多阶段构建 (alpine) |
+| 层       | 技术                                |
+|----------|-------------------------------------|
+| 前端     | 原生 HTML/CSS/JS，无框架            |
+| 通信     | WebSocket (gorilla/websocket)       |
+| 后端     | Go 1.22 / Node.js / Python 3 可选   |
+| 存储     | 浏览器 localStorage                 |
+| 跨标签   | BroadcastChannel API                |
+| 容器化   | Docker 多阶段构建 (alpine)          |
 
 ## 架构要点
 
@@ -74,13 +118,8 @@ qunchat/
 WebSocket 消息格式：
 
 ```json
-// 用户消息
 {"name":"alice","text":"大家好","time":1718000000000,"senderId":"abc123","online":5}
-
-// 系统消息
 {"name":"系统","text":"alice 加入了群聊","time":1718000000000,"online":5}
-
-// 改名命令（客户端 -> 服务端）
 {"cmd":"rename","name":"newname","senderId":"abc123"}
 ```
 

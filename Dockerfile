@@ -11,9 +11,9 @@ FROM golang:1.22-alpine AS go
 WORKDIR /app
 COPY go.mod go.sum* ./
 RUN go mod download
-COPY server/ ./server/
-COPY index.html ./
-RUN go build -o server ./server
+COPY backends/go/ ./backends/go/
+COPY frontend/index.html ./frontend/
+RUN go build -o server ./backends/go
 EXPOSE 8080
 CMD ["./server"]
 
@@ -21,20 +21,20 @@ CMD ["./server"]
 # ---------- Node 后端 ----------
 FROM node:18-alpine AS node
 WORKDIR /app
-COPY scripts/package*.json ./scripts/
-RUN cd scripts && npm install
-COPY scripts/dev.js ./scripts/
-COPY index.html ./
+COPY backends/node/package*.json ./backends/node/
+RUN cd backends/node && npm install
+COPY backends/node/dev.js ./backends/node/
+COPY frontend/index.html ./frontend/
 EXPOSE 8080
-CMD ["node", "scripts/dev.js"]
+CMD ["node", "backends/node/dev.js"]
 
 
 # ---------- Python 后端 ----------
 FROM python:3.11-slim AS python
 WORKDIR /app
-COPY scripts/requirements.txt ./scripts/
-RUN pip install -r scripts/requirements.txt --no-cache-dir
-COPY scripts/server.py ./scripts/
-COPY index.html ./
+COPY backends/python/requirements.txt ./backends/python/
+RUN pip install -r backends/python/requirements.txt --no-cache-dir
+COPY backends/python/server.py ./backends/python/
+COPY frontend/index.html ./frontend/
 EXPOSE 8080
-CMD ["python", "scripts/server.py"]
+CMD ["python", "backends/python/server.py"]

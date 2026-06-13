@@ -7,7 +7,7 @@ from pathlib import Path
 from aiohttp import web
 
 PORT = int(os.environ.get("PORT", "8080"))
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent / 'frontend'
 
 clients: dict[web.WebSocketResponse, str] = {}
 

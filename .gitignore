@@ -19,6 +19,14 @@
 *.swp
 *.swo
 
-# Node (if any)
+# Python
+__pycache__/
+*.pyc
+
+# Node
 node_modules/
 package-lock.json
+
+# Legacy (old structure)
+scripts/
+server/

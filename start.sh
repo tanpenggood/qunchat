@@ -18,17 +18,17 @@ case $BACKEND in
   1|go)
     cmd="go"
     name="Go"
-    run="go run ./server"
+    run="go run ./backends/go"
     ;;
   2|node)
     cmd="node"
     name="Node"
-    run="node scripts/dev.js"
+    run="node backends/node/dev.js"
     ;;
   3|python)
     cmd="python3"
     name="Python"
-    run="python3 scripts/server.py"
+    run="python3 backends/python/server.py"
     ;;
   *)
     echo "无效选项: $BACKEND"
