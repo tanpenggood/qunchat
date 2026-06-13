@@ -15,6 +15,14 @@
 - 移动适配 —— safe-area-inset 刘海屏适配，触屏优化
 - 连接状态 —— 顶部实时显示连接状态，断线自动重连
 
+## 截图
+
+<p>
+  <img src="images/sjd.png" alt="手机端截图" width="225">
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="images/pcd.png" alt="PC 端截图" width="400">
+</p>
+
 ## 快速开始
 
 ```bash
