@@ -35,27 +35,35 @@ type Message struct {
 	ReplyTo  *ReplyTo `json:"replyTo,omitempty"`
 }
 
+type userSession struct {
+	name  string
+	count int
+}
+
 type Client struct {
-	hub  *Hub
-	conn *websocket.Conn
-	send chan []byte
-	name string
+	hub      *Hub
+	conn     *websocket.Conn
+	send     chan []byte
+	name     string
+	senderId string
 }
 
 type Hub struct {
-	clients    map[*Client]bool
-	broadcast  chan Message
-	register   chan *Client
-	unregister chan *Client
-	mu         sync.RWMutex
+	clients      map[*Client]bool
+	userSessions map[string]*userSession
+	broadcast    chan Message
+	register     chan *Client
+	unregister   chan *Client
+	mu           sync.RWMutex
 }
 
 func NewHub() *Hub {
 	return &Hub{
-		clients:    make(map[*Client]bool),
-		broadcast:  make(chan Message, 256),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
+		clients:      make(map[*Client]bool),
+		userSessions: make(map[string]*userSession),
+		broadcast:    make(chan Message, 256),
+		register:     make(chan *Client),
+		unregister:   make(chan *Client),
 	}
 }
 
@@ -65,28 +73,40 @@ func (h *Hub) Run() {
 		case client := <-h.register:
 			h.mu.Lock()
 			h.clients[client] = true
-			online := len(h.clients)
 			h.mu.Unlock()
-			log.Printf("Client connected (online: %d)", online)
+			log.Printf("WebSocket connected")
 
 		case client := <-h.unregister:
 			h.mu.Lock()
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
 				close(client.send)
-				online := len(h.clients)
-				h.mu.Unlock()
-				if client.name != "" {
-					h.broadcastSystem(client.name + " 离开了群聊")
+				sid := client.senderId
+				if sid != "" {
+					if s, ok := h.userSessions[sid]; ok {
+						s.count--
+						if s.count <= 0 {
+							delete(h.userSessions, sid)
+							h.mu.Unlock()
+							h.broadcastSystem(client.name + " 离开了群聊")
+							log.Printf("User left: %s (online: %d)", client.name, len(h.userSessions))
+						} else {
+							h.mu.Unlock()
+							log.Printf("Tab closed: %s (still %d tabs open)", client.name, s.count)
+						}
+					} else {
+						h.mu.Unlock()
+					}
+				} else {
+					h.mu.Unlock()
 				}
-				log.Printf("Client disconnected: %s (online: %d)", client.name, online)
 			} else {
 				h.mu.Unlock()
 			}
 
 		case message := <-h.broadcast:
 			h.mu.RLock()
-			message.Online = len(h.clients)
+			message.Online = len(h.userSessions)
 			data, _ := json.Marshal(message)
 			for client := range h.clients {
 				select {
@@ -103,11 +123,9 @@ func (h *Hub) Run() {
 func (h *Hub) GetOnlineUsers() []string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	names := make([]string, 0, len(h.clients))
-	for c := range h.clients {
-		if c.name != "" {
-			names = append(names, c.name)
-		}
+	names := make([]string, 0, len(h.userSessions))
+	for _, s := range h.userSessions {
+		names = append(names, s.name)
 	}
 	return names
 }
@@ -158,19 +176,37 @@ func (c *Client) readPump() {
 		}
 
 		if c.name == "" {
-			if msg.Name == "" {
+			if msg.Name == "" || msg.SenderId == "" {
 				continue
 			}
 			c.name = msg.Name
+			c.senderId = msg.SenderId
 			h := c.hub
-			h.broadcastSystem(c.name + " 加入了群聊")
+			h.mu.Lock()
+			if s, ok := h.userSessions[c.senderId]; ok {
+				s.count++
+				online := len(h.userSessions)
+				h.mu.Unlock()
+				welcome, _ := json.Marshal(Message{Name: "系统", Text: "已连接", Online: online})
+				c.send <- welcome
+			} else {
+				h.userSessions[c.senderId] = &userSession{name: c.name, count: 1}
+				h.mu.Unlock()
+				h.broadcastSystem(c.name + " 加入了群聊")
+			}
 			continue
 		}
 
 		if msg.Cmd == "rename" && msg.Name != "" {
 			oldName := c.name
 			c.name = msg.Name
-			c.hub.broadcastSystem(oldName + " 改名为 " + c.name)
+			h := c.hub
+			h.mu.Lock()
+			if s, ok := h.userSessions[c.senderId]; ok {
+				s.name = msg.Name
+			}
+			h.mu.Unlock()
+			h.broadcastSystem(oldName + " 改名为 " + c.name)
 			continue
 		}
 
