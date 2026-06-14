@@ -205,6 +205,11 @@ func (c *Client) readPump() {
 			if s, ok := h.userSessions[c.senderId]; ok {
 				s.name = msg.Name
 			}
+			for client := range h.clients {
+				if client.senderId == c.senderId {
+					client.name = msg.Name
+				}
+			}
 			h.mu.Unlock()
 			h.broadcastSystem(oldName + " 改名为 " + c.name)
 			continue

@@ -71,6 +71,9 @@ wss.on('connection', (ws) => {
       info.name = msg.name
       const session = userSessions.get(info.senderId)
       if (session) session.name = msg.name
+      for (const [, ci] of clients) {
+        if (ci.senderId === info.senderId) ci.name = msg.name
+      }
       broadcast({ name: '系统', text: oldName + ' 改名为 ' + msg.name, time: Date.now() })
       return
     }

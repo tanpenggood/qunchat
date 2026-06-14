@@ -73,6 +73,9 @@ async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
             session = user_sessions.get(info["sender_id"])
             if session:
                 session["name"] = n
+            for cinfo in clients.values():
+                if cinfo["sender_id"] == info["sender_id"]:
+                    cinfo["name"] = n
             await broadcast({
                 "name": "系统",
                 "text": f"{old_name} 改名为 {n}",
